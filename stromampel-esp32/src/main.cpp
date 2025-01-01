@@ -34,13 +34,20 @@ bool InitWiFi()
 
 bool InitLAN()
    {
-   if(Ethernet.begin(MAC_eth))
+   if(Ethernet.localIP()!=0)
       {
       return(1);
       }
    else
       {
-      return(0);
+      if(Ethernet.begin(MAC_eth))
+         {
+         return(1);
+         }
+      else
+         {
+         return(0);
+         }
       }
    }
 
@@ -57,35 +64,33 @@ void setup()
    esp_read_mac(MAC_wifi, ESP_MAC_WIFI_STA);
    Serial.print("WIFI MAC: ");   for (int i = 0; i < 5; i++) {Serial.printf("%02X:", MAC_wifi[i]);} Serial.printf("%02X\n", MAC_wifi[5]);
 
-   //Initialize WiFi
-   Serial.println("Initializing WiFi...");
-   if(InitWiFi())
-      {
-      Serial.print("...successful, IP is:");
-      Serial.println(WiFi.localIP());
-      }
-   else
-      {
-      Serial.println("... not successful, FUCK");
-      }
-
-   //Initialize LAN
-   Serial.println("Initializing LAN...");
-   if (InitLAN)
-      {
-      Serial.print("...successful, IP is: ");
-      Serial.println(Ethernet.localIP());
-      }
-   else
-      {
-      Serial.println("...not successful, FUCK");
-      }
-
    }
 
 
 void loop()
    {
+
+   if(InitWiFi())
+      {
+      Serial.print("...WiFi is ON, IP is:");
+      Serial.println(WiFi.localIP());
+      }
+   else
+      {
+      Serial.println("...Wifi is OFF");
+      }
+
+   if (InitLAN)
+      {
+      Serial.print("...LAN is ON, IP is: ");
+      Serial.println(Ethernet.localIP());
+      }
+   else
+      {
+      Serial.println("...LAN is OFF");
+      }
+
+
 
 /*   if(WiFi.status() == WL_CONNECTED)
         {
