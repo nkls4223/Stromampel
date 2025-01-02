@@ -2,6 +2,9 @@
 #include <WiFi.h>
 #include <Ethernet.h>
 #include <HTTPClient.h>
+#include <ESP32Time.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
 int LED_NETWORK = 33;
 int LED_RED = 2;
@@ -11,12 +14,10 @@ int RELAY_PIN = 32;
 String WIFI_SSID = "0";
 String WIFI_PWD = "fn0rd4223";
 
-
 uint8_t MAC_eth[6];
 uint8_t MAC_wifi[6];
 
-
-
+ESP32Time rtc(3600);
 
 enum NetworkConnection
    {
@@ -106,8 +107,8 @@ SignalStatus GetData()
          Serial.println("Requesting Data via WiFi...");
          WiFiClient wificlient;
          HTTPClient httpclient;
-//         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy.json";
-         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy_test.json";
+         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy.json";
+//         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy_test.json";
          httpclient.begin(wificlient, serverPath.c_str());
          int httpResponseCode = httpclient.GET();
          if (httpResponseCode>0) 
@@ -275,6 +276,19 @@ void SetRelayStatus(SignalStatus LEDstatus)
    }
 */
 
+void InitRTC()
+   {
+   Serial.println("Initializing RTC...");
+   WiFiUDP ntpUDP;
+   NTPClient timeClient(ntpUDP, "ptbtime1.ptb.de", 3600);
+   timeClient.begin();
+   timeClient.update();
+   rtc.setTime(timeClient.getEpochTime());
+   String formattedTime = timeClient.getFormattedTime();
+   Serial.println(formattedTime);
+   }
+
+
 /*=======================================================================*/
 
 void setup()
@@ -293,7 +307,9 @@ void setup()
    Serial.print("ETH MAC: "); for (int i = 0; i < 5; i++) {Serial.printf("%02X:", MAC_eth[i]);} Serial.printf("%02X\n", MAC_eth[5]);
    esp_read_mac(MAC_wifi, ESP_MAC_WIFI_STA);
    Serial.print("WIFI MAC: ");   for (int i = 0; i < 5; i++) {Serial.printf("%02X:", MAC_wifi[i]);} Serial.printf("%02X\n", MAC_wifi[5]);
-//   Ethernet.init(33);
+   InitWiFi();
+   InitLAN();
+   InitRTC();
    }
 
 
@@ -327,11 +343,18 @@ void loop()
       Serial.println("...LAN is OFF");
       }
 */
+
+//   Serial.print("Time is: ");
+   //ESP32Time tnow = rtc.now();
+
+   Serial.print("Time is: ");
+   Serial.println(rtc.getDateTime());
    SignalStatus status = GetData();
    Serial.print("Signal Status: ");
    Serial.println(status);
    SetLEDSignal(status);
    SetRelayStatus(status);
+
    delay(5000);
    }
 
