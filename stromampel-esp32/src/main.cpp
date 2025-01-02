@@ -4,17 +4,18 @@
 #include <HTTPClient.h>
 
 int LED_NETWORK = 33;
-int LED_BLUE = 32;
 int LED_RED = 2;
 int LED_YELLOW = 14;
 int LED_GREEN = 15;
-
+int RELAY_PIN = 32;
 String WIFI_SSID = "0";
 String WIFI_PWD = "fn0rd4223";
 
 
 uint8_t MAC_eth[6];
 uint8_t MAC_wifi[6];
+
+
 
 
 enum NetworkConnection
@@ -34,8 +35,15 @@ enum SignalStatus
    YELLOW = 2,
    GREEN = 3,
    };
+SignalStatus lstatus = OFF;
 
-SignalStatus status = OFF;
+enum RelayStatus
+   {
+   RELAYOFF = 0,
+   RELAYON = 1,
+   };
+RelayStatus rstatus = RELAYOFF;
+
 
 bool InitWiFi()
    {
@@ -98,8 +106,8 @@ SignalStatus GetData()
          Serial.println("Requesting Data via WiFi...");
          WiFiClient wificlient;
          HTTPClient httpclient;
-         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy.json";
-//         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy_test.json";
+//         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy.json";
+         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy_test.json";
          httpclient.begin(wificlient, serverPath.c_str());
          int httpResponseCode = httpclient.GET();
          if (httpResponseCode>0) 
@@ -196,11 +204,76 @@ void SetLEDSignal(SignalStatus status)
 
    }
 
-void SetRelayStatus(SignalStatus status);
+void SetRelayStatus(SignalStatus LEDstatus)
    {
-   
+//   DateTime NowTime=rtc.now();
+   switch(LEDstatus)
+       {
+       case RED:
+          {
+          digitalWrite(RELAY_PIN, LOW);
+          rstatus=RELAYOFF;
+          break;
+          }
+       case YELLOW:
+          {
+          digitalWrite(RELAY_PIN, LOW);
+          rstatus=RELAYOFF;
+          break;
+          }
+       case GREEN:
+          {
+          digitalWrite(RELAY_PIN, HIGH);
+	  rstatus=RELAYON;
+          break;
+          }
+       case OFF:
+          {
+          digitalWrite(RELAY_PIN, LOW);
+          rstatus=RELAYOFF;
+          break;
+          }
+       }
    }
 
+/*switch (value)
+      {
+      case true:
+         {
+         if (RelayOn)
+            {
+            }
+         else
+            {
+            Serial.println("Turning Relay ON");
+            digitalWrite(_relay_pin, HIGH);
+            RelayOn = true;
+            HystEndDateTime = NowTime + HystSetTimeSpan;
+            break;
+            }
+         }
+      case false:
+         {
+         if (RelayOn)
+            {
+            if (NowTime < HystEndDateTime)
+               {
+               }
+            else
+               {
+               Serial.println("Turning Relay OFF");
+               digitalWrite(_relay_pin, LOW);
+               RelayOn = false;
+               break;
+               }
+            }
+         else
+            {
+            }
+         }
+      }
+   }
+*/
 
 /*=======================================================================*/
 
@@ -214,7 +287,7 @@ void setup()
    pinMode(LED_RED, OUTPUT);
    pinMode(LED_YELLOW, OUTPUT);
    pinMode(LED_GREEN, OUTPUT);
-   pinMode(LED_BLUE, OUTPUT);
+   pinMode(RELAY_PIN, OUTPUT);
    //get MAC Addresses
    esp_read_mac(MAC_eth, ESP_MAC_ETH);
    Serial.print("ETH MAC: "); for (int i = 0; i < 5; i++) {Serial.printf("%02X:", MAC_eth[i]);} Serial.printf("%02X\n", MAC_eth[5]);
@@ -254,11 +327,11 @@ void loop()
       Serial.println("...LAN is OFF");
       }
 */
-   status = GetData();
+   SignalStatus status = GetData();
    Serial.print("Signal Status: ");
    Serial.println(status);
    SetLEDSignal(status);
-   SetRelayStatus(ststus);
+   SetRelayStatus(status);
    delay(5000);
    }
 
