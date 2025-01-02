@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <Ethernet.h>
-
+#include <HTTPClient.h>
 
 int LED_NETWORK = 33;
 int LED_BLUE = 32;
@@ -12,23 +12,36 @@ int LED_GREEN = 15;
 String WIFI_SSID = "0";
 String WIFI_PWD = "fn0rd4223";
 
+
 uint8_t MAC_eth[6];
 uint8_t MAC_wifi[6];
 
 
-enum Signal_Status
+enum NetworkConnection
    {
+   DISCONNECTED = 0,
+   WIFI = 1,
+   LAN = 2,
+   };
+NetworkConnection connection = DISCONNECTED;
+
+
+
+enum SignalStatus
+   {
+   OFF = 0,
    RED = 1,
    YELLOW = 2,
-   GREEM = 3,
+   GREEN = 3,
    };
+
+SignalStatus status = OFF;
 
 bool InitWiFi()
    {
    if(WiFi.status() == WL_CONNECTED)
       {
       return(1);
-      
       }
    else
       {
@@ -67,36 +80,128 @@ bool InitLAN()
       }
    }
 
-void testLEDs()
+SignalStatus GetData()
    {
-   int i=0;
-   Serial.println("Testing LEDs...");
-   while(i<15)
+   SignalStatus status; 
+   int energy_balance;
+   switch(connection)
       {
-      digitalWrite(LED_RED, HIGH);
-      digitalWrite(LED_YELLOW, LOW);
-      digitalWrite(LED_GREEN, LOW);
-      digitalWrite(LED_BLUE, LOW);
-      delay(30);
-      digitalWrite(LED_RED, LOW);
-      digitalWrite(LED_YELLOW, HIGH);
-      digitalWrite(LED_GREEN, LOW);
-      digitalWrite(LED_BLUE, LOW);
-      delay(30);
-      digitalWrite(LED_RED, LOW);
-      digitalWrite(LED_YELLOW, LOW);
-      digitalWrite(LED_GREEN, HIGH);
-      digitalWrite(LED_BLUE, LOW);
-      delay(30);
-      digitalWrite(LED_RED, LOW);
-      digitalWrite(LED_YELLOW, LOW);
-      digitalWrite(LED_GREEN, LOW);
-      digitalWrite(LED_BLUE, HIGH);
-      delay(30);
-      digitalWrite(LED_BLUE, LOW);
-      i++;
+      case DISCONNECTED:
+         {
+         Serial.println("GetData(): Network DISCONNECTED");
+         return(OFF);
+         break;
+         }
+      case WIFI:
+         {
+         Serial.println("GetData(): Network WIFI");
+         Serial.println("Requesting Data via WiFi...");
+         WiFiClient wificlient;
+         HTTPClient httpclient;
+         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy.json";
+//         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy_test.json";
+         httpclient.begin(wificlient, serverPath.c_str());
+         int httpResponseCode = httpclient.GET();
+         if (httpResponseCode>0) 
+            {
+            String payload = httpclient.getString();
+            int start_at = payload.lastIndexOf(":");
+            String value = payload.substring(start_at + 3, payload.length() - 3);
+            energy_balance = value.toInt();
+            break;
+            }
+         else
+            {
+            return(OFF);
+            break;
+            } 
+         }
+      case LAN:
+         {
+         Serial.println("GetData(): Network LAN");
+
+         //temporary, fix later
+         return(OFF);
+         break;
+         }
       }
+
+   Serial.print("Energy balance:");
+   Serial.println(energy_balance);
+
+   if((energy_balance > 0) && (energy_balance < 1000 )) 
+      {
+      Serial.println("Signal is YELLOW");
+      status=YELLOW;
+      return(status);
+      }
+
+   if(energy_balance >= 1000) 
+      {
+      Serial.println("Signal is GREEN");
+      status=GREEN;
+      return(status);
+      }
+
+   if(energy_balance <= 0)
+      {
+      Serial.println("Signal is RED");
+      status=RED;
+      return(status);
+      }
+
    }
+
+void SetLEDSignal(SignalStatus status)
+   {
+   Serial.print("SetLEDStatus(): status is ");
+   Serial.println(status);
+   switch(status)
+      {
+      case GREEN:
+         {
+         Serial.println("SetLEDStatus(): turning green LED on");
+         digitalWrite(LED_GREEN, HIGH);
+         digitalWrite(LED_YELLOW, LOW);
+         digitalWrite(LED_RED, LOW);
+         break;
+         }
+      case YELLOW:
+         {
+         Serial.println("SetLEDStatus(): turning yellow LED on");
+         digitalWrite(LED_GREEN, LOW);
+         digitalWrite(LED_YELLOW, HIGH);
+         digitalWrite(LED_RED, LOW);
+         break;
+         }
+      case RED:
+         {
+         Serial.println("SetLEDStatus(): turning red LED on");
+         digitalWrite(LED_GREEN, LOW);
+         digitalWrite(LED_YELLOW, LOW);
+         digitalWrite(LED_RED, HIGH);
+         break;
+         }
+      case OFF:
+         {
+         Serial.println("SetLEDStatus(): turning all LEDs off");
+         digitalWrite(LED_GREEN, LOW);
+         digitalWrite(LED_YELLOW, LOW);
+         digitalWrite(LED_RED, LOW);
+         break;
+         }
+
+
+      }
+
+   }
+
+void SetRelayStatus(SignalStatus status);
+   {
+   
+   }
+
+
 /*=======================================================================*/
 
 void setup()
@@ -123,31 +228,37 @@ void loop()
    {
 
    digitalWrite(LED_NETWORK, LOW); 
-   testLEDs();
+   NetworkConnection conn = DISCONNECTED;;
    delay(1000);
+
    if(InitWiFi())
       {
       Serial.print("...WiFi is ON, IP is:");
       Serial.println(WiFi.localIP());
       digitalWrite(LED_NETWORK, HIGH);
+      connection=WIFI;
       }
    else
       {
       Serial.println("...Wifi is OFF");
       }
 
-   if (InitLAN())
+/*   if (InitLAN())
       {
       Serial.print("...LAN is ON, IP is: ");
       Serial.println(Ethernet.localIP());
+      conn= LAN;
       }
    else
       {
       Serial.println("...LAN is OFF");
       }
-
-
-
+*/
+   status = GetData();
+   Serial.print("Signal Status: ");
+   Serial.println(status);
+   SetLEDSignal(status);
+   SetRelayStatus(ststus);
    delay(5000);
    }
 
@@ -164,7 +275,8 @@ void loop()
       }
    else
       {
-      Serial.println("Not connected");
+      Serial .println("Not connected");
       delay(2000);
       }
 */
+
