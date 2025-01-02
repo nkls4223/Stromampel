@@ -17,7 +17,13 @@ String WIFI_PWD = "fn0rd4223";
 uint8_t MAC_eth[6];
 uint8_t MAC_wifi[6];
 
-ESP32Time rtc(3600);
+ESP32Time rtc(0);
+
+//Time for hysteresis
+int HystTime=900;
+
+//EpochTime when Hysteresis timer was started
+unsigned long HystTimeStarted=0;
 
 enum NetworkConnection
    {
@@ -107,8 +113,8 @@ SignalStatus GetData()
          Serial.println("Requesting Data via WiFi...");
          WiFiClient wificlient;
          HTTPClient httpclient;
-         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy.json";
-//         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy_test.json";
+//         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy.json";
+         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy_test.json";
          httpclient.begin(wificlient, serverPath.c_str());
          int httpResponseCode = httpclient.GET();
          if (httpResponseCode>0) 
@@ -208,73 +214,52 @@ void SetLEDSignal(SignalStatus status)
 void SetRelayStatus(SignalStatus LEDstatus)
    {
 //   DateTime NowTime=rtc.now();
+// int HystTime=900;
+// 24
+// 25 //EpochTime when Hysteresis timer was started
+// 26 long HystTimeStarted;
+
+   
+
    switch(LEDstatus)
        {
        case RED:
           {
-          digitalWrite(RELAY_PIN, LOW);
-          rstatus=RELAYOFF;
-          break;
+          if((rtc.getLocalEpoch()-HystTimeStarted)>HystTime)
+             {
+             digitalWrite(RELAY_PIN, LOW);
+             rstatus=RELAYOFF;
+             break;
+             }
           }
        case YELLOW:
           {
-          digitalWrite(RELAY_PIN, LOW);
-          rstatus=RELAYOFF;
-          break;
+          if((rtc.getLocalEpoch()-HystTimeStarted)>HystTime)
+             {
+             digitalWrite(RELAY_PIN, LOW);
+             rstatus=RELAYOFF;
+             break;
+             }
           }
        case GREEN:
           {
           digitalWrite(RELAY_PIN, HIGH);
 	  rstatus=RELAYON;
+          HystTimeStarted=rtc.getLocalEpoch();
           break;
           }
        case OFF:
           {
-          digitalWrite(RELAY_PIN, LOW);
-          rstatus=RELAYOFF;
-          break;
+          if((rtc.getLocalEpoch()-HystTimeStarted)>HystTime)
+             {
+             digitalWrite(RELAY_PIN, LOW);
+             rstatus=RELAYOFF;
+             break;
+             }
           }
        }
    }
 
-/*switch (value)
-      {
-      case true:
-         {
-         if (RelayOn)
-            {
-            }
-         else
-            {
-            Serial.println("Turning Relay ON");
-            digitalWrite(_relay_pin, HIGH);
-            RelayOn = true;
-            HystEndDateTime = NowTime + HystSetTimeSpan;
-            break;
-            }
-         }
-      case false:
-         {
-         if (RelayOn)
-            {
-            if (NowTime < HystEndDateTime)
-               {
-               }
-            else
-               {
-               Serial.println("Turning Relay OFF");
-               digitalWrite(_relay_pin, LOW);
-               RelayOn = false;
-               break;
-               }
-            }
-         else
-            {
-            }
-         }
-      }
-   }
-*/
 
 void InitRTC()
    {
