@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <Ethernet.h>
+//#include <Ethernet.h>
 #include <HTTPClient.h>
 #include <ESP32Time.h>
 #include <NTPClient.h>
@@ -12,7 +12,7 @@ int LED_YELLOW = 14;
 int LED_GREEN = 15;
 int RELAY_PIN = 32;
 String WIFI_SSID = "0";
-String WIFI_PWD = "fn0rd4223";
+String WIFI_PWD = "";
 
 uint8_t MAC_eth[6];
 uint8_t MAC_wifi[6];
@@ -20,7 +20,7 @@ uint8_t MAC_wifi[6];
 ESP32Time rtc(0);
 
 //Time for hysteresis
-int HystTime=900;
+int HystTime=60;
 
 //EpochTime when Hysteresis timer was started
 unsigned long HystTimeStarted=0;
@@ -76,6 +76,10 @@ bool InitWiFi()
 
 bool InitLAN()
    {
+
+/* Commented out because LAN port doesnt work...?
+
+Serial.println("Initializing LAN");
    if(Ethernet.localIP()!=0)
       {
       return(1);
@@ -92,7 +96,8 @@ bool InitLAN()
             {
             return(0);
             }
-      }
+      }*/
+   return (0);
    }
 
 SignalStatus GetData()
@@ -113,8 +118,8 @@ SignalStatus GetData()
          Serial.println("Requesting Data via WiFi...");
          WiFiClient wificlient;
          HTTPClient httpclient;
-//         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy.json";
-         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy_test.json";
+         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy.json";
+//         String serverPath = "http://alfons.siebenlinden.net/7lenergy/energy_test.json";
          httpclient.begin(wificlient, serverPath.c_str());
          int httpResponseCode = httpclient.GET();
          if (httpResponseCode>0) 
@@ -213,13 +218,6 @@ void SetLEDSignal(SignalStatus status)
 
 void SetRelayStatus(SignalStatus LEDstatus)
    {
-//   DateTime NowTime=rtc.now();
-// int HystTime=900;
-// 24
-// 25 //EpochTime when Hysteresis timer was started
-// 26 long HystTimeStarted;
-
-   
 
    switch(LEDstatus)
        {
@@ -293,7 +291,7 @@ void setup()
    esp_read_mac(MAC_wifi, ESP_MAC_WIFI_STA);
    Serial.print("WIFI MAC: ");   for (int i = 0; i < 5; i++) {Serial.printf("%02X:", MAC_wifi[i]);} Serial.printf("%02X\n", MAC_wifi[5]);
    InitWiFi();
-   InitLAN();
+//   InitLAN(); LAN port not working...? -> maybe fix later
    InitRTC();
    }
 
@@ -302,7 +300,7 @@ void loop()
    {
 
    digitalWrite(LED_NETWORK, LOW); 
-   NetworkConnection conn = DISCONNECTED;;
+   connection = DISCONNECTED;;
    delay(1000);
 
    if(InitWiFi())
@@ -317,17 +315,18 @@ void loop()
       Serial.println("...Wifi is OFF");
       }
 
-/*   if (InitLAN())
+if (InitLAN())
       {
+     
       Serial.print("...LAN is ON, IP is: ");
-      Serial.println(Ethernet.localIP());
-      conn= LAN;
+ //     Serial.println(Ethernet.localIP());
+      connection= LAN;
       }
    else
       {
       Serial.println("...LAN is OFF");
       }
-*/
+
 
 //   Serial.print("Time is: ");
    //ESP32Time tnow = rtc.now();
