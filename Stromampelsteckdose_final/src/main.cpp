@@ -66,48 +66,27 @@ void testLEDs()
    digitalWrite(_led_green, LOW);
    }
 
-void SwitchRelay(bool value)
-  {
+void SwitchRelay(bool value) {
   Serial.print("Relay Value is ");
   Serial.println(value);
-  DateTime NowTime=rtc.now();
-  switch (value)
-    {
-    case true:
-      {
-      if (RelayOn)
-        {
-        }
-      else
-        {
-        Serial.println("Turning Relay ON");
-        digitalWrite(_relay_pin, HIGH);
-        RelayOn = true;
-        HystEndDateTime = NowTime + HystSetTimeSpan;
-        break;
-        }
-      }
-    case false:
-      {
-      if (RelayOn)
-        {
-        if (NowTime < HystEndDateTime)
-          {
-          }
-        else
-          {
-          Serial.println("Turning Relay OFF");
-          digitalWrite(_relay_pin, LOW);
-          RelayOn = false;
-          break;
-          }
-        }
-      else
-        {
-        }
-   } 
-    } 
+
+  if (!RelayOn) {
+    return;
   }
+
+  DateTime NowTime=rtc.now();
+
+  if (value) {
+    Serial.println("Turning Relay ON");
+    digitalWrite(_relay_pin, HIGH);
+    RelayOn = true;
+    HystEndDateTime = NowTime + HystSetTimeSpan;
+  } else if ( NowTime >= HystEndDateTime) {
+    Serial.println("Turning Relay OFF");
+    digitalWrite(_relay_pin, LOW);
+    RelayOn = false;
+  }
+}
 
 void setup() {
   delay(1000);
